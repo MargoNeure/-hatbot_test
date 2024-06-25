@@ -16,21 +16,21 @@ dp = Dispatcher()
 
 def get_keyboard():
     keyboard = [
-        [KeyboardButton(text="/start")],
-        [KeyboardButton(text="/ура")],
-        [KeyboardButton(text="/info")]
+        [KeyboardButton(text="Поприветствовать")],
+        [KeyboardButton(text="Крикнуть 'Ура!'")],
+        [KeyboardButton(text="Информация о боте")]
     ]
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
-@dp.message(Command("start"))
+@dp.message(lambda message: message.text == "Поприветствовать")
 async def send_welcome(message: types.Message):
     await message.answer("Привет! Я эхобот на aiogram 3. Отправь мне любое сообщение, и я повторю его.", reply_markup=get_keyboard())
 
-@dp.message(Command("ура"))
+@dp.message(lambda message: message.text == "Крикнуть 'Ура!'")
 async def send_ura(message: types.Message):
     await message.answer("УРАААА! Я эхобот на aiogram 3. Отправь мне любое сообщение, и я повторю его.", reply_markup=get_keyboard())
 
-@dp.message(Command("info"))
+@dp.message(lambda message: message.text == "Информация о боте")
 async def botinfo(message: types.Message):
     await message.answer("Информация по этому боту не заполнена", reply_markup=get_keyboard())
 
