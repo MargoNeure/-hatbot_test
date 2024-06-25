@@ -2,7 +2,7 @@ import logging
 import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -54,26 +54,44 @@ async def botinfo(message: types.Message):
 @dp.message(lambda message: message.text == "Выбрать ручку")
 async def start_choose_pen(message: types.Message, state: FSMContext):
     await state.set_state(ChoosePen.waiting_for_purpose)
-    await message.answer("Для каких целей вам нужна ручка? (работа/учеба/творчество)")
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Работа", callback_data="purpose_работа")],
+        [InlineKeyboardButton(text="Учеба", callback_data="purpose_учеба")],
+        [InlineKeyboardButton(text="Творчество", callback_data="purpose_творчество")]
+    ])
+    await message.answer("Для каких целей вам нужна ручка?", reply_markup=keyboard)
 
 
-@dp.message(ChoosePen.waiting_for_purpose)
-async def process_purpose(message: types.Message, state: FSMContext):
-    await state.update_data(purpose=message.text.lower())
+@dp.callback_query(lambda c: c.data.startswith('purpose_'))
+async def process_purpose(callback_query: types.CallbackQuery, state: FSMContext):
+    purpose = callback_query.data.split('_')[1]
+    await state.update_data(purpose=purpose)
     await state.set_state(ChoosePen.waiting_for_ink_color)
-    await message.answer("Какой цвет чернил вы предпочитаете? (синий/черный/красный)")
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Синий", callback_data="color_синий")],
+        [InlineKeyboardButton(text="Черный", callback_data="color_черный")],
+        [InlineKeyboardButton(text="Красный", callback_data="color_красный")]
+    ])
+    await callback_query.message.edit_text("Какой цвет чернил вы предпочитаете?", reply_markup=keyboard)
 
 
-@dp.message(ChoosePen.waiting_for_ink_color)
-async def process_ink_color(message: types.Message, state: FSMContext):
-    await state.update_data(ink_color=message.text.lower())
+@dp.callback_query(lambda c: c.data.startswith('color_'))
+async def process_ink_color(callback_query: types.CallbackQuery, state: FSMContext):
+    color = callback_query.data.split('_')[1]
+    await state.update_data(ink_color=color)
     await state.set_state(ChoosePen.waiting_for_line_thickness)
-    await message.answer("Какую толщину линии вы предпочитаете? (тонкая/средняя/толстая)")
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Тонкая", callback_data="thickness_тонкая")],
+        [InlineKeyboardButton(text="Средняя", callback_data="thickness_средняя")],
+        [InlineKeyboardButton(text="Толстая", callback_data="thickness_толстая")]
+    ])
+    await callback_query.message.edit_text("Какую толщину линии вы предпочитаете?", reply_markup=keyboard)
 
 
-@dp.message(ChoosePen.waiting_for_line_thickness)
-async def process_line_thickness(message: types.Message, state: FSMContext):
-    await state.update_data(line_thickness=message.text.lower())
+@dp.callback_query(lambda c: c.data.startswith('thickness_'))
+async def process_line_thickness(callback_query: types.CallbackQuery, state: FSMContext):
+    thickness = callback_query.data.split('_')[1]
+    await state.update_data(line_thickness=thickness)
 
     data = await state.get_data()
 
@@ -81,7 +99,6 @@ async def process_line_thickness(message: types.Message, state: FSMContext):
         ("работа", "синий", "средняя"): "Модель 'ОфисПро': идеальна для ежедневной работы с документами",
         ("учеба", "черный", "тонкая"): "Модель 'СтудиУм': отлично подходит для конспектов и заметок",
         ("творчество", "красный", "толстая"): "Модель 'АртЛайн': прекрасный выбор для творческих проектов",
-        ("работа", "черный", "средняя"): "Модель 'JJJJ'",
     }
 
     recommendation = pen_recommendations.get(
@@ -89,9 +106,8 @@ async def process_line_thickness(message: types.Message, state: FSMContext):
         "Стандартная модель 'Универсал': подходит для различных задач"
     )
 
-    await message.answer(
-        f"На основе ваших предпочтений, я рекомендую следующую ручку:\n{recommendation}\n\nЕсли вы хотите узнать о других моделях или у вас есть дополнительные вопросы, пожалуйста, дайте мне знать.",
-        reply_markup=get_keyboard())
+    await callback_query.message.edit_text(
+        f"На основе ваших предпочтений, я рекомендую следующую ручку:\n{recommendation}\n\nЕсли вы хотите узнать о других моделях или у вас есть дополнительные вопросы, пожалуйста, дайте мне знать.")
     await state.clear()
 
 
