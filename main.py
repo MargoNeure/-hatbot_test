@@ -5,9 +5,13 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 import asyncio
 
-API_TOKEN = config
+
+API_TOKEN = config.token
+
+logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=API_TOKEN)
+dp = Dispatcher()
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
