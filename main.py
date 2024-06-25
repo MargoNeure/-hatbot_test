@@ -72,20 +72,24 @@ async def process_purpose(callback_query: types.CallbackQuery, state: FSMContext
         [InlineKeyboardButton(text="Черный", callback_data="color_черный")],
         [InlineKeyboardButton(text="Красный", callback_data="color_красный")]
     ])
-    await callback_query.message.edit_text("Какой цвет чернил вы предпочитаете?", reply_markup=keyboard)
+    await callback_query.message.edit_text(f"Вы выбрали цель: {purpose}\n\nКакой цвет чернил вы предпочитаете?",
+                                           reply_markup=keyboard)
 
 
 @dp.callback_query(lambda c: c.data.startswith('color_'))
 async def process_ink_color(callback_query: types.CallbackQuery, state: FSMContext):
     color = callback_query.data.split('_')[1]
     await state.update_data(ink_color=color)
+    data = await state.get_data()
     await state.set_state(ChoosePen.waiting_for_line_thickness)
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Тонкая", callback_data="thickness_тонкая")],
         [InlineKeyboardButton(text="Средняя", callback_data="thickness_средняя")],
         [InlineKeyboardButton(text="Толстая", callback_data="thickness_толстая")]
     ])
-    await callback_query.message.edit_text("Какую толщину линии вы предпочитаете?", reply_markup=keyboard)
+    await callback_query.message.edit_text(
+        f"Вы выбрали цель: {data['purpose']}\nЦвет чернил: {color}\n\nКакую толщину линии вы предпочитаете?",
+        reply_markup=keyboard)
 
 
 @dp.callback_query(lambda c: c.data.startswith('thickness_'))
@@ -106,8 +110,11 @@ async def process_line_thickness(callback_query: types.CallbackQuery, state: FSM
         "Стандартная модель 'Универсал': подходит для различных задач"
     )
 
-    await callback_query.message.edit_text(
-        f"На основе ваших предпочтений, я рекомендую следующую ручку:\n{recommendation}\n\nЕсли вы хотите узнать о других моделях или у вас есть дополнительные вопросы, пожалуйста, дайте мне знать.")
+    result_text = f"Ваш выбор:\nЦель: {data['purpose']}\nЦвет чернил: {data['ink_color']}\nТолщина линии: {thickness}\n\n"
+    result_text += f"На основе ваших предпочтений, я рекомендую следующую ручку:\n{recommendation}\n\n"
+    result_text += "Если вы хотите узнать о других моделях или у вас есть дополнительные вопросы, пожалуйста, дайте мне знать."
+
+    await callback_query.message.edit_text(result_text)
     await state.clear()
 
 
