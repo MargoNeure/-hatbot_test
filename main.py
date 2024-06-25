@@ -100,14 +100,14 @@ async def process_line_thickness(callback_query: types.CallbackQuery, state: FSM
     data = await state.get_data()
 
     pen_recommendations = {
-        ("работа", "синий", "средняя"): "Модель 'ОфисПро': идеальна для ежедневной работы с документами",
-        ("учеба", "черный", "тонкая"): "Модель 'СтудиУм': отлично подходит для конспектов и заметок",
-        ("творчество", "красный", "толстая"): "Модель 'АртЛайн': прекрасный выбор для творческих проектов",
+        ("работа", "синий", "средняя"): "Модель 'Ювелирная грация': идеальна для ежедневной работы с документами http://penatelier.tilda.ws/tproduct/475671006932-yuvelirnaya-gratsiya",
+        ("учеба", "черный", "тонкая"): "Модель 'Гармония Огонь и Лед': отлично подходит для конспектов и заметок  http://penatelier.tilda.ws/tproduct/467939644822-garmoniya-ogon-i-led",
+        ("творчество", "красный", "толстая"): "Модель 'Вихрь Вдохновения': прекрасный выбор для творческих проектов http://penatelier.tilda.ws/tproduct/509816028762-vihr-vdohnoveniya",
     }
 
     recommendation = pen_recommendations.get(
         (data['purpose'], data['ink_color'], data['line_thickness']),
-        "Стандартная модель 'Универсал': подходит для различных задач"
+        "Стандартная модель 'Фламинго Блюз': подходит для различных задач http://penatelier.tilda.ws/tproduct/436039085332-flamingo-blyuz"
     )
 
     result_text = f"Ваш выбор:\nЦель: {data['purpose']}\nЦвет чернил: {data['ink_color']}\nТолщина линии: {thickness}\n\n"
