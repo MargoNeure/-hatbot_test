@@ -68,7 +68,7 @@ async def process_category(callback_query: types.CallbackQuery, state: FSMContex
     await state.set_state(ProductInfo.waiting_for_model)
 
     models = {
-        "business": ["Executive", "Professional", "Diplomat"],
+        "business": ["руководитель", "Professional", "Diplomat"],
         "designer": ["Luxury", "Anniversary", "Special"],
         "economy": ["Student", "Daily", "Basic"]
     }
@@ -91,7 +91,7 @@ async def process_model(callback_query: types.CallbackQuery, state: FSMContext):
 
     pen_info = {
         ("business",
-         "executive"): "Модель Executive: элегантная ручка с золотым пером и корпусом из натурального дерева. Идеальна для руководителей и бизнесменов.",
+         "руководитель"): "Модель Executive: элегантная ручка с золотым пером и корпусом из натурального дерева. Идеальна для руководителей и бизнесменов.",
         ("business",
          "professional"): "Модель Professional: надежная ручка с стальным пером и прочным металлическим корпусом. Отлично подходит для длительного использования.",
         ("business",
