@@ -9,8 +9,13 @@ from aiogram.fsm.storage.memory import MemoryStorage
 import config
 from unsplash.api import Api
 from unsplash.auth import Auth
+import aiohttp
 
-API_TOKEN = config.token
+UNSPLASH_ACCESS_KEY = 'yClbk2wsSbgx0ein8r5R6Sep7gitarrvGus5Rq9QkIA'  # Замените на ваш ключ доступа Unsplash
+UNSPLASH_SECRET_KEY = 'itAcdoXaOd20u6JDRgyfY8N1k8sef9ALL4IgJSJrnYI'  # Замените на ваш секретный ключ Unsplash
+UNSPLASH_REDIRECT_URI = '622581'  # Замените на ваш URI перенаправления
+
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -18,15 +23,15 @@ bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-auth = Auth('YOUR_ACCESS_KEY', 'YOUR_SECRET_KEY', 'YOUR_REDIRECT_URI')
+# Настройка Unsplash API
+auth = Auth(UNSPLASH_ACCESS_KEY, UNSPLASH_SECRET_KEY, UNSPLASH_REDIRECT_URI)
 api = Api(auth)
 
-# Создаем начальную клавиатуру
+# Создаем клавиатуры
 def get_start_keyboard():
     keyboard = [[KeyboardButton(text="Поприветствовать")]]
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
-# Создаем основную клавиатуру
 def get_main_keyboard():
     keyboard = [
         [KeyboardButton(text="Информация о продукции")],
@@ -88,29 +93,43 @@ async def process_category(callback_query: types.CallbackQuery, state: FSMContex
     await callback_query.message.edit_text(f"Вы выбрали категорию: {category_name}\nВыберите модель ручки:",
                                            reply_markup=keyboard)
 
+async def get_image_from_unsplash(query):
+    try:
+        photos = api.search.photos(query, per_page=1)
+        if photos and photos['results']:
+            return photos['results'][0].urls.small
+        else:
+            return None
+    except Exception as e:
+        print(f"Ошибка при запросе к Unsplash API: {e}")
+        return None
+
 @dp.callback_query(lambda c: c.data.startswith('model_'))
 async def process_model(callback_query: types.CallbackQuery, state: FSMContext):
+    await callback_query.answer()
     model = callback_query.data.split('_')[1]
     data = await state.get_data()
     category = data['category']
     category_name = data['category_name']
 
-    pen_info = {
-        ("business", "руководитель"): "Модель Ювелирная грация: Утонченный корпус украшен замысловатым растительным узором, тщательно вырезанным вручную мастерами своего дела. http://penatelier.tilda.ws/tproduct/475671006932-yuvelirnaya-gratsiya",
-        ("business", "профессионал"): "Модель Хрустальная фантазия: Ее уникальный корпус, покрытый мерцающими кристаллами, переливается нежными оттенками розового и лилового, напоминая сказочные сумерки или цветущие поля лаванды. http://penatelier.tilda.ws/tproduct/262098745112-hrustalnaya-fantaziya",
-        ("business", "дипломат"): "Модель Изумрудный Элеганс: Элегантный зеленый корпус этой ручки привлекает внимание своей глубиной и насыщенностью. Серебряные детали придают ей утонченный и дорогой вид. http://penatelier.tilda.ws/tproduct/570192768822-izumrudnii-elegans",
-        ("economy", "студент"): "Модель Фламинго Блюз: Эта роскошная ручка ручной работы излучает роскошь и яркий стиль. http://penatelier.tilda.ws/tproduct/436039085332-flamingo-blyuz",
-        ("economy", "начинающий писатель"): "Модель Гармония Огонь и Лед: Ярко-оранжевый корпус в сочетании с глубоким синим оттенком делает ее заметной и стильной. Металлические детали придают ей элегантность и прочность. http://penatelier.tilda.ws/tproduct/467939644822-garmoniya-ogon-i-led",
-        ("economy", "начинающий дизайнер"): "Модель Basic: простая и надежная ручка для офисной работы. Экономичный выбор для больших организаций.",
-        ("designer", "дизайнер"): "Модель Калейдоскоп красок: Корпус покрыт ярким калейдоскопом цветов и форм, создающих неповторимый узор, полный жизни и энергии. http://penatelier.tilda.ws/tproduct/696281938322-kaleidoskop-krasok",
-        ("designer", "писатель"): "Модель Вихрь Вдохновения:  Многоцветные спирали на корпусе напоминают о бесконечности креативных идей. Золотые акценты добавляют нотку роскоши и утонченности. http://penatelier.tilda.ws/tproduct/509816028762-vihr-vdohnoveniya",
-        ("designer", "художник"): "Модель Special: уникальная ручка с необычным дизайном. Прекрасный подарок для творческих людей."
-    }
+    await callback_query.message.edit_text("Загрузка информации...")
 
-    info = pen_info.get((category, model), "Информация о данной модели отсутствует.")
+    # Здесь должен быть ваш код для получения информации о ручке
+    # Пример:
+    pen_info = f"Информация о модели {model.capitalize()} из категории {category_name}"
 
-    result_text = f"Категория: {category_name}\nМодель: {model.capitalize()}\n\n{info}"
-    await callback_query.message.edit_text(result_text)
+    # Получаем изображение из Unsplash
+    image_url = await get_image_from_unsplash(f"{category} pen {model}")
+
+    result_text = f"Категория: {category_name}\nМодель: {model.capitalize()}\n\n{pen_info}"
+
+    if image_url:
+        # Отправляем изображение с подписью
+        await callback_query.message.answer_photo(photo=image_url, caption=result_text)
+    else:
+        # Если изображение не найдено, отправляем только текст
+        await callback_query.message.edit_text(result_text)
+
     await state.clear()
 
 @dp.message(lambda message: message.text == "Информация о боте")
@@ -179,7 +198,14 @@ async def process_line_thickness(callback_query: types.CallbackQuery, state: FSM
     result_text += f"На основе ваших предпочтений, я рекомендую следующую ручку:\n{recommendation}\n\n"
     result_text += "Если вы хотите узнать о других моделях или у вас есть дополнительные вопросы, пожалуйста, дайте мне знать."
 
-    await callback_query.message.edit_text(result_text)
+    # Получаем изображение из Unsplash для рекомендованной ручки
+    image_url = await get_image_from_unsplash(f"{data['purpose']} pen {data['ink_color']} {thickness}")
+
+    if image_url:
+        await callback_query.message.answer_photo(photo=image_url, caption=result_text)
+    else:
+        await callback_query.message.edit_text(result_text)
+
     await state.clear()
 
 @dp.message()
