@@ -15,6 +15,10 @@ UNSPLASH_ACCESS_KEY = 'yClbk2wsSbgx0ein8r5R6Sep7gitarrvGus5Rq9QkIA'  # Заме�
 UNSPLASH_SECRET_KEY = 'itAcdoXaOd20u6JDRgyfY8N1k8sef9ALL4IgJSJrnYI'  # Замените на ваш секретный ключ Unsplash
 UNSPLASH_REDIRECT_URI = '622581'  # Замените на ваш URI перенаправления
 
+API_TOKEN = config.token
+
+logging.basicConfig(level=logging.INFO)
+
 
 
 logging.basicConfig(level=logging.INFO)
@@ -36,7 +40,8 @@ def get_main_keyboard():
     keyboard = [
         [KeyboardButton(text="Информация о продукции")],
         [KeyboardButton(text="Информация о боте")],
-        [KeyboardButton(text="Выбрать ручку")]
+        [KeyboardButton(text="Выбрать ручку")],
+        [KeyboardButton(text="Показать картинку ручки")]  # Новая кнопка
     ]
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
@@ -207,6 +212,40 @@ async def process_line_thickness(callback_query: types.CallbackQuery, state: FSM
         await callback_query.message.edit_text(result_text)
 
     await state.clear()
+
+    @dp.message(lambda message: message.text == "Показать картинку ручки")
+    async def show_pen_image(message: types.Message):
+        await message.answer("Пожалуйста, выберите тип ручки:", reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Бизнес-ручка", callback_data="image_business")],
+            [InlineKeyboardButton(text="Дизайнерская ручка", callback_data="image_designer")],
+            [InlineKeyboardButton(text="Студенческая ручка", callback_data="image_student")]
+        ]))
+
+    @dp.callback_query(lambda c: c.data.startswith('image_'))
+    async def process_image_choice(callback_query: types.CallbackQuery):
+        pen_type = callback_query.data.split('_')[1]
+        image_query = f"{pen_type} pen"
+
+        await callback_query.answer()
+        await callback_query.message.edit_text("Загрузка изображения...")
+
+        image_url = await get_image_from_unsplash(image_query)
+
+        if image_url:
+            await callback_query.message.answer_photo(photo=image_url, caption=f"Вот изображение {pen_type} ручки")
+        else:
+            await callback_query.message.edit_text("К сожалению, не удалось найти подходящее изображение.")
+
+async def get_image_from_unsplash(query):
+    try:
+        photos = api.search.photos(query, per_page=1)
+        if photos and photos['results']:
+            return photos['results'][0].urls.small
+        else:
+            return None
+    except Exception as e:
+        print(f"Ошибка при запросе к Unsplash API: {e}")
+        return None
 
 @dp.message()
 async def echo(message: types.Message):
