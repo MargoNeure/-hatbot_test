@@ -13,9 +13,9 @@ import aiohttp
 
 
 API_TOKEN = config.token
-UNSPLASH_ACCESS_KEY = 'yClbk2wsSbgx0ein8r5R6Sep7gitarrvGus5Rq9QkIA'
-UNSPLASH_SECRET_KEY = 'itAcdoXaOd20u6JDRgyfY8N1k8sef9ALL4IgJSJrnYI'
-UNSPLASH_REDIRECT_URI = '622581'
+UNSPLASH_ACCESS_KEY = config.key1
+UNSPLASH_SECRET_KEY = config.key2
+UNSPLASH_REDIRECT_URI = config.key3
 
 logging.basicConfig(level=logging.INFO)
 
