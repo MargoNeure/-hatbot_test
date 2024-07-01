@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import random
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
@@ -10,7 +11,6 @@ import config
 from unsplash.api import Api
 from unsplash.auth import Auth
 import aiohttp
-
 
 API_TOKEN = config.token
 UNSPLASH_ACCESS_KEY = config.key1
@@ -23,21 +23,9 @@ bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-
-
-# Создаем клавиатуру
-def get_keyboard():
-    keyboard = [
-        [KeyboardButton(text="Поприветствовать")],
-        [KeyboardButton(text="Крикнуть 'Ура!'")],
-        [KeyboardButton(text="Информация о боте")],
-        [KeyboardButton(text="Выбрать ручку")]
-    ]
-
 # Настройка Unsplash API
 auth = Auth(UNSPLASH_ACCESS_KEY, UNSPLASH_SECRET_KEY, UNSPLASH_REDIRECT_URI)
 api = Api(auth)
-
 
 
 # Создаем клавиатуры
@@ -52,7 +40,6 @@ def get_main_keyboard():
         [KeyboardButton(text="Информация о боте")],
         [KeyboardButton(text="Выбрать ручку")],
         [KeyboardButton(text="Картинки Unsplash")]
-
     ]
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
@@ -63,22 +50,8 @@ class ChoosePen(StatesGroup):
     waiting_for_line_thickness = State()
 
 
-
-@dp.message(lambda message: message.text == "Поприветствовать")
-async def send_welcome(message: types.Message):
-    await message.answer("Привет! Я эхобот на aiogram 3. Отправь мне любое сообщение, и я повторю его.",
-                         reply_markup=get_keyboard())
-
-
-@dp.message(lambda message: message.text == "Крикнуть 'Ура!'")
-async def send_ura(message: types.Message):
-    await message.answer("УРАААА! Я эхобот на aiogram 3. Отправь мне любое сообщение, и я повторю его.",
-                         reply_markup=get_keyboard())
-
-
 class ProductInfo(StatesGroup):
     waiting_for_category = State()
-    waiting_for_model = State()
 
 
 @dp.message(Command("start"))
@@ -106,44 +79,16 @@ async def start_product_info(message: types.Message, state: FSMContext):
 @dp.callback_query(lambda c: c.data.startswith('category_'))
 async def process_category(callback_query: types.CallbackQuery, state: FSMContext):
     category_code = callback_query.data.split('_')[1]
-    category_names = {
-        "business": "Executive Collection (бизнес-линия)",
-        "designer": "Creative Pro Series (для дизайнеров)",
-        "economy": "Campus Vibes (студенческая серия)"
-    }
-    category_name = category_names[category_code]
-    await state.update_data(category=category_code, category_name=category_name)
-    await state.set_state(ProductInfo.waiting_for_model)
-
-    models = {
-        "business": ["Руководитель", "Профессионал", "Дипломат"],
-        "designer": ["Дизайнер", "Писатель", "Художник"],
-        "economy": ["Студент", "Начинающий писатель", "Начинающий дизайнер"]
+    category_info = {
+        "business": "Executive Collection (бизнес-линия): Элегантные ручки премиум-класса для деловых встреч и важных подписаний. https://tilda.ru/page/preview/?pageid=50333639&lang=RU#rec759761127",
+        "designer": "Creative Pro Series (для дизайнеров): Ручки с широким спектром цветов и толщин линий для творческих задач. https://tilda.ru/page/preview/?pageid=50333639&lang=RU#rec759763977",
+        "economy": "Campus Vibes (студенческая серия): Надежные и доступные ручки для ежедневного использования в учебе. https://tilda.ru/page/preview/?pageid=50333639&lang=RU#rec759765315"
     }
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=model, callback_data=f"model_{model.lower()}")]
-        for model in models[category_code]
-    ])
+    info = category_info.get(category_code, "Информация о данной категории отсутствует.")
 
-    await callback_query.message.edit_text(f"Вы выбрали категорию: {category_name}\nВыберите модель ручки:",
-                                           reply_markup=keyboard)
-
-
-@dp.callback_query(lambda c: c.data.startswith('model_'))
-async def process_model(callback_query: types.CallbackQuery, state: FSMContext):
-    await callback_query.answer()
-    model = callback_query.data.split('_')[1]
-    data = await state.get_data()
-    category_name = data['category_name']
-
-    pen_info = f"Информация о модели {model.capitalize()} из категории {category_name}"
-
-    result_text = f"Категория: {category_name}\nМодель: {model.capitalize()}\n\n{pen_info}"
-
-    await callback_query.message.edit_text(result_text)
+    await callback_query.message.edit_text(f"Информация о категории:\n\n{info}")
     await state.clear()
-
 
 
 @dp.message(lambda message: message.text == "Информация о боте")
@@ -202,14 +147,17 @@ async def process_line_thickness(callback_query: types.CallbackQuery, state: FSM
     data = await state.get_data()
 
     pen_recommendations = {
-        ("работа", "синий", "средняя"): "Модель 'ОфисПро': идеальна для ежедневной работы с документами",
-        ("учеба", "черный", "тонкая"): "Модель 'СтудиУм': отлично подходит для конспектов и заметок",
-        ("творчество", "красный", "толстая"): "Модель 'АртЛайн': прекрасный выбор для творческих проектов",
+        ("работа", "синий",
+         "средняя"): "Модель 'Ювелирная грация': идеальна для ежедневной работы с документами http://penatelier.tilda.ws/tproduct/475671006932-yuvelirnaya-gratsiya",
+        ("учеба", "черный",
+         "тонкая"): "Модель 'Гармония Огонь и Лед': отлично подходит для конспектов и заметок  http://penatelier.tilda.ws/tproduct/467939644822-garmoniya-ogon-i-led",
+        ("творчество", "красный",
+         "толстая"): "Модель 'Вихрь Вдохновения': прекрасный выбор для творческих проектов http://penatelier.tilda.ws/tproduct/509816028762-vihr-vdohnoveniya",
     }
 
     recommendation = pen_recommendations.get(
         (data['purpose'], data['ink_color'], data['line_thickness']),
-        "Стандартная модель 'Универсал': подходит для различных задач"
+        "Стандартная модель 'Фламинго Блюз': подходит для различных задач http://penatelier.tilda.ws/tproduct/436039085332-flamingo-blyuz"
     )
 
     result_text = f"Ваш выбор:\nЦель: {data['purpose']}\nЦвет чернил: {data['ink_color']}\nТолщина линии: {thickness}\n\n"
@@ -223,9 +171,9 @@ async def process_line_thickness(callback_query: types.CallbackQuery, state: FSM
 async def get_image_from_unsplash(query):
     try:
         # Попробуем сначала на английском языке
-        photos = api.search.photos(query, per_page=5)
+        photos = api.search.photos(query, per_page=30)
         if photos and photos['results']:
-            return photos['results'][0].urls.small
+            return random.choice(photos['results']).urls.small
 
         # Если не нашли, попробуем на русском
         ru_query = {
@@ -236,9 +184,9 @@ async def get_image_from_unsplash(query):
             "book": "книга"
         }.get(query, query)
 
-        photos = api.search.photos(ru_query, per_page=5)
+        photos = api.search.photos(ru_query, per_page=30)
         if photos and photos['results']:
-            return photos['results'][0].urls.small
+            return random.choice(photos['results']).urls.small
 
         return None
     except Exception as e:
@@ -282,79 +230,11 @@ async def process_unsplash_choice(callback_query: types.CallbackQuery):
             f"К сожалению, не удалось найти изображение для '{categories[category]}'. Попробуйте другую категорию.")
 
 
-@dp.message(lambda message: message.text == "Выбрать ручку")
-async def start_choose_pen(message: types.Message, state: FSMContext):
-    await state.set_state(ChoosePen.waiting_for_purpose)
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Работа", callback_data="purpose_работа")],
-        [InlineKeyboardButton(text="Учеба", callback_data="purpose_учеба")],
-        [InlineKeyboardButton(text="Творчество", callback_data="purpose_творчество")]
-    ])
-    await message.answer("Для каких целей вам нужна ручка?", reply_markup=keyboard)
-
-
-@dp.callback_query(lambda c: c.data.startswith('purpose_'))
-async def process_purpose(callback_query: types.CallbackQuery, state: FSMContext):
-    purpose = callback_query.data.split('_')[1]
-    await state.update_data(purpose=purpose)
-    await state.set_state(ChoosePen.waiting_for_ink_color)
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Синий", callback_data="color_синий")],
-        [InlineKeyboardButton(text="Черный", callback_data="color_черный")],
-        [InlineKeyboardButton(text="Красный", callback_data="color_красный")]
-    ])
-    await callback_query.message.edit_text(f"Вы выбрали цель: {purpose}\n\nКакой цвет чернил вы предпочитаете?",
-                                           reply_markup=keyboard)
-
-
-@dp.callback_query(lambda c: c.data.startswith('color_'))
-async def process_ink_color(callback_query: types.CallbackQuery, state: FSMContext):
-    color = callback_query.data.split('_')[1]
-    await state.update_data(ink_color=color)
-    data = await state.get_data()
-    await state.set_state(ChoosePen.waiting_for_line_thickness)
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Тонкая", callback_data="thickness_тонкая")],
-        [InlineKeyboardButton(text="Средняя", callback_data="thickness_средняя")],
-        [InlineKeyboardButton(text="Толстая", callback_data="thickness_толстая")]
-    ])
-    await callback_query.message.edit_text(
-        f"Вы выбрали цель: {data['purpose']}\nЦвет чернил: {color}\n\nКакую толщину линии вы предпочитаете?",
-        reply_markup=keyboard)
-
-
-@dp.callback_query(lambda c: c.data.startswith('thickness_'))
-async def process_line_thickness(callback_query: types.CallbackQuery, state: FSMContext):
-    thickness = callback_query.data.split('_')[1]
-    await state.update_data(line_thickness=thickness)
-
-    data = await state.get_data()
-
-    pen_recommendations = {
-        ("работа", "синий", "средняя"): "Модель 'Ювелирная грация': идеальна для ежедневной работы с документами http://penatelier.tilda.ws/tproduct/475671006932-yuvelirnaya-gratsiya",
-        ("учеба", "черный", "тонкая"): "Модель 'Гармония Огонь и Лед': отлично подходит для конспектов и заметок  http://penatelier.tilda.ws/tproduct/467939644822-garmoniya-ogon-i-led",
-        ("творчество", "красный", "толстая"): "Модель 'Вихрь Вдохновения': прекрасный выбор для творческих проектов http://penatelier.tilda.ws/tproduct/509816028762-vihr-vdohnoveniya",
-    }
-
-    recommendation = pen_recommendations.get(
-        (data['purpose'], data['ink_color'], data['line_thickness']),
-        "Стандартная модель 'Фламинго Блюз': подходит для различных задач http://penatelier.tilda.ws/tproduct/436039085332-flamingo-blyuz"
-    )
-
-    result_text = f"Ваш выбор:\nЦель: {data['purpose']}\nЦвет чернил: {data['ink_color']}\nТолщина линии: {thickness}\n\n"
-    result_text += f"На основе ваших предпочтений, я рекомендую следующую ручку:\n{recommendation}\n\n"
-    result_text += "Если вы хотите узнать о других моделях или у вас есть дополнительные вопросы, пожалуйста, дайте мне знать."
-
-    await callback_query.message.edit_text(result_text)
-    await state.clear()
-
-
 @dp.message()
 async def echo(message: types.Message):
     await message.answer(
         "Извините, я не понял ваш запрос. Пожалуйста, воспользуйтесь кнопками меню для выбора действия.",
         reply_markup=get_main_keyboard())
-
 
 
 async def main():
